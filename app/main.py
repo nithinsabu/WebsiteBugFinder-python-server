@@ -41,7 +41,7 @@ async def root():
     <textarea id="htmlText" name="htmlText" rows="5" cols="50"></textarea><br><br>
 
     <label for="specification">Specification:</label><br>
-    <input type="text" id="specification" name="specification"><br><br>
+    <textarea type="text" id="specification" name="specification" rows="5" cols="50"></textarea><br><br>
 
     <label for="designFile">Design File:</label><br>
     <input type="file" id="designFile" name="designFile"><br><br>
@@ -56,18 +56,41 @@ async def root():
     const responseBox = document.getElementById("responseBox");
 
     form.addEventListener("submit", async function (event) {
-      event.preventDefault();
+  event.preventDefault();
 
-      const formData = new FormData(form);
+  const formData = new FormData();
 
-      const response = await fetch("http://localhost:8000/webpage-analysis", {
-        method: "POST",
-        body: formData
-      });
+  const htmlText = document.getElementById("htmlText").value;
+  const specification = document.getElementById("specification").value;
+  const designFileInput = document.getElementById("designFile");
 
-      const text = await response.text();
-      responseBox.textContent = text;
-    });
+  if (htmlText.trim()) {
+    formData.append("htmlText", htmlText);
+  }
+
+  if (specification.trim()) {
+    formData.append("specification", specification);
+  }
+
+  if (designFileInput.files.length > 0) {
+    formData.append("designFile", designFileInput.files[0]);
+  }
+  responseBox.textContent = "LOADING...";
+  try {const response = await fetch("http://localhost:8000/webpage-analysis", {
+    method: "POST",
+    body: formData
+  });
+
+  const text = await response.text();
+  responseBox.textContent = text;
+  }
+  catch(e){
+    responseBox.textContent = e.message;
+  }finally{
+
+  }
+});
+
   </script>
 </body>
 </html>
@@ -80,33 +103,34 @@ async def webpage_analysis(
     specification: Annotated[str | None, Form()] = None,
     designFile: Annotated[UploadFile | None, File()] = None
 ):
+    designFile_content = await designFile.read()
     if designFile:
         print(designFile)
     if not htmlText:
         raise HTTPException(status_code=400, detail="htmlText is required")
     if len(htmlText)>50000 or specification and len(specification)>50000:
         raise HTTPException(status_code=400, detail="Files are too large")
-    if designFile and len(await designFile.read())>5*1024*1024:
+    if designFile and len(designFile_content)>5*1024*1024:
         raise HTTPException(status_code=400, detail="Files are too large")
+    
     contents = []
+    text_prompt = f"Analyze the following HTML for UI/UX flaws:\n\nHTML:\n{htmlText}"
+    if specification:
+        text_prompt += f"\n\nSpecification:\n{specification}"
+    contents.append(text_prompt)
 
     if designFile:
         if not designFile.content_type.startswith("image/"):
             raise HTTPException(status_code=400, detail="designFile must be an image")
+        temp_file_path = designFile.filename
+        with open(temp_file_path, "wb") as f:
+            f.write(designFile_content)
         
-        with open(designFile.filename, "wb") as f:
-            f.write(await designFile.read())
-
-        uploaded = client.files.upload(file=designFile.filename)
+        uploaded = client.files.upload(file="designFile.png")
         contents.append(uploaded)
-        os.remove(designFile.filename)
+        os.remove(temp_file_path)
 
-    text_prompt = f"Analyze the following HTML for UI/UX flaws:\n\nHTML:\n{htmlText}"
-    if specification:
-        text_prompt += f"\n\nSpecification:\n{specification}"
-
-    contents.append(text_prompt)
-
+    # contents = [text_prompt, uploaded]
     response = client.models.generate_content(
         model="gemini-2.5-flash",
         contents=contents
@@ -114,5 +138,4 @@ async def webpage_analysis(
 
     if designFile:
         client.files.delete(name=uploaded.name)
-
     return response.text
