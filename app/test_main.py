@@ -12,7 +12,9 @@ html_spec_json = {"htmlText": "<h1>Hello</h1>", "specification": "Must follow ac
 
 
 @patch("app.main.client.models.generate_content")
-def test_htmlText_only_returns_200(mock_generate):
+@patch("app.main.client.files.upload")
+@patch("app.main.client.files.delete")
+def test_htmlText_only_returns_200(mock_delete, mock_upload, mock_generate):
     mock_generate.return_value.text = "Mock: HTML only analysis."
     # JSON content passed as a field in multipart/form-data
     response = client.post(
@@ -23,9 +25,14 @@ def test_htmlText_only_returns_200(mock_generate):
     assert response.status_code == 200
     assert response.text == "Mock: HTML only analysis."
     mock_generate.assert_called_once()
+    mock_delete.assert_not_called()
+    mock_upload.assert_not_called()
+
 
 @patch("app.main.client.models.generate_content")
-def test_htmlText_with_specification_returns_200(mock_generate):
+@patch("app.main.client.files.upload")
+@patch("app.main.client.files.delete")
+def test_htmlText_with_specification_returns_200(mock_delete, mock_upload, mock_generate):
     mock_generate.return_value.text = "Mock: HTML with spec."
 
     response = client.post(
@@ -36,6 +43,8 @@ def test_htmlText_with_specification_returns_200(mock_generate):
     assert response.status_code == 200
     assert "Mock: HTML with spec." in response.text
     mock_generate.assert_called_once()
+    mock_delete.assert_not_called()
+    mock_upload.assert_not_called()
 
 @patch("app.main.client.models.generate_content")
 @patch("app.main.client.files.upload")
@@ -83,8 +92,11 @@ def test_htmlText_with_specification_and_designFile_returns_200(mock_delete, moc
     mock_delete.assert_called_once()
     mock_upload.assert_called_once()
 
+
 @patch("app.main.client.models.generate_content")
-def test_no_htmlText_throws_error(mock_generate):
+@patch("app.main.client.files.upload")
+@patch("app.main.client.files.delete")
+def test_no_htmlText_throws_error(mock_delete, mock_upload, mock_generate):
     mock_generate.return_value.text = "Mock: HTML only analysis."
     # JSON content passed as a field in multipart/form-data
     response = client.post(
@@ -93,6 +105,9 @@ def test_no_htmlText_throws_error(mock_generate):
     )
 
     assert response.status_code == 422
+    mock_generate.assert_not_called()
+    mock_delete.assert_not_called()
+    mock_upload.assert_not_called()
 
 @patch("app.main.client.models.generate_content")
 @patch("app.main.client.files.upload")
@@ -113,9 +128,15 @@ def test_htmlText_with_wrong_designFile_format_returns_200(mock_delete, mock_upl
     os.remove("test.pdf")
     assert response.status_code == 400
     assert "designFile must be an image" in response.text
+    mock_generate.assert_not_called()
+    mock_delete.assert_not_called()
+    mock_upload.assert_not_called()
+
 
 @patch("app.main.client.models.generate_content")
-def test_large_htmlText_throws_error(mock_generate):
+@patch("app.main.client.files.upload")
+@patch("app.main.client.files.delete")
+def test_large_htmlText_throws_error(mock_delete, mock_upload, mock_generate):
     mock_generate.return_value.text = "Mock: HTML only analysis."
     # JSON content passed as a field in multipart/form-data
     response = client.post(
@@ -125,9 +146,15 @@ def test_large_htmlText_throws_error(mock_generate):
 
     assert response.status_code == 400
     assert "Files are too large" in response.text
+    mock_generate.assert_not_called()
+    mock_delete.assert_not_called()
+    mock_upload.assert_not_called()
+
 
 @patch("app.main.client.models.generate_content")
-def test_large_specification_throws_error(mock_generate):
+@patch("app.main.client.files.upload")
+@patch("app.main.client.files.delete")
+def test_large_specification_throws_error(mock_delete, mock_upload, mock_generate):
     mock_generate.return_value.text = "Mock: HTML only analysis."
     # JSON content passed as a field in multipart/form-data
     response = client.post(
@@ -137,6 +164,9 @@ def test_large_specification_throws_error(mock_generate):
 
     assert response.status_code == 400
     assert "Files are too large" in response.text
+    mock_generate.assert_not_called()
+    mock_delete.assert_not_called()
+    mock_upload.assert_not_called()
 
 @patch("app.main.client.models.generate_content")
 @patch("app.main.client.files.upload")
@@ -159,3 +189,6 @@ def test_large_designFile_throws_error(mock_delete, mock_upload, mock_generate):
     os.remove("test.png")
     assert response.status_code == 400
     assert "Files are too large" in response.text
+    mock_generate.assert_not_called()
+    mock_delete.assert_not_called()
+    mock_upload.assert_not_called()
