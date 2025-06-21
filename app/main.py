@@ -103,33 +103,33 @@ async def webpage_analysis(
     specification: Annotated[str | None, Form()] = None,
     designFile: Annotated[UploadFile | None, File()] = None
 ):
-    designFile_content = await designFile.read()
     if designFile:
-        print(designFile)
+        designFile_content = await designFile.read()
     if not htmlText:
         raise HTTPException(status_code=400, detail="htmlText is required")
     if len(htmlText)>50000 or specification and len(specification)>50000:
         raise HTTPException(status_code=400, detail="Files are too large")
     if designFile and len(designFile_content)>5*1024*1024:
         raise HTTPException(status_code=400, detail="Files are too large")
-    
+    if designFile and not designFile.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="designFile must be an image")
+        
     contents = []
     text_prompt = f"Analyze the following HTML for UI/UX flaws:\n\nHTML:\n{htmlText}"
     if specification:
         text_prompt += f"\n\nSpecification:\n{specification}"
+    if designFile:
+        text_prompt += "\nUse the design file attached."
     contents.append(text_prompt)
 
     if designFile:
-        if not designFile.content_type.startswith("image/"):
-            raise HTTPException(status_code=400, detail="designFile must be an image")
         temp_file_path = designFile.filename
         with open(temp_file_path, "wb") as f:
             f.write(designFile_content)
         
-        uploaded = client.files.upload(file="designFile.png")
+        uploaded = client.files.upload(file=temp_file_path)
         contents.append(uploaded)
         os.remove(temp_file_path)
-
     # contents = [text_prompt, uploaded]
     response = client.models.generate_content(
         model="gemini-2.5-flash",

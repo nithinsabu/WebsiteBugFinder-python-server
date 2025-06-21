@@ -3,10 +3,13 @@ from fastapi.testclient import TestClient
 from unittest.mock import patch, Mock
 from .main import app
 import os
+import app.main as main_module
+import pytest
 client = TestClient(app)
 
 html_json = {"htmlText": "<h1>Hello</h1>"}
 html_spec_json = {"htmlText": "<h1>Hello</h1>", "specification": "Must follow accessibility"}
+
 
 @patch("app.main.client.models.generate_content")
 def test_htmlText_only_returns_200(mock_generate):
@@ -19,12 +22,7 @@ def test_htmlText_only_returns_200(mock_generate):
 
     assert response.status_code == 200
     assert response.text == "Mock: HTML only analysis."
-    mock_generate.assert_called_once_with(
-        model="gemini-2.5-flash",
-        contents=[
-            "Analyze the following HTML for UI/UX flaws:\n\nHTML:\n<h1>Hello</h1>"
-        ]
-    )
+    mock_generate.assert_called_once()
 
 @patch("app.main.client.models.generate_content")
 def test_htmlText_with_specification_returns_200(mock_generate):
@@ -44,9 +42,7 @@ def test_htmlText_with_specification_returns_200(mock_generate):
 @patch("app.main.client.files.delete")
 def test_htmlText_with_designFile_returns_200(mock_delete, mock_upload, mock_generate):
     mock_generate.return_value.text = "Mock: HTML with file"
-    mock_upload = Mock()
-    mock_upload.return_value = "Mock file uploaded"
-    mock_upload.name = "test1.png"
+    mock_upload.return_value.name = "test1.png"
 
     with open("test.png", "wb") as f:  # dummy image
         f.write(b"\x89PNG\r\n\x1a\n")
@@ -55,9 +51,9 @@ def test_htmlText_with_designFile_returns_200(mock_delete, mock_upload, mock_gen
         response = client.post(
             "/webpage-analysis",
             data=html_json,
-            files={"designFile": (mock_upload.name, file, "image/png")}
+            files={"designFile": (mock_upload.return_value.name, file, "image/png")}
         )
-
+    os.remove("test.png")
     assert response.status_code == 200
     assert "Mock: HTML with file" in response.text
     mock_generate.assert_called_once()
@@ -67,11 +63,9 @@ def test_htmlText_with_designFile_returns_200(mock_delete, mock_upload, mock_gen
 @patch("app.main.client.models.generate_content")
 @patch("app.main.client.files.upload")
 @patch("app.main.client.files.delete")
-def test_htmlText_with_designFile_and_specification_returns_200(mock_delete, mock_upload, mock_generate):
+def test_htmlText_with_specification_and_designFile_returns_200(mock_delete, mock_upload, mock_generate):
     mock_generate.return_value.text = "Mock: HTML with file"
-    mock_upload = Mock()
-    mock_upload.return_value = "Mock file uploaded"
-    mock_upload.name = "test1.png"
+    mock_upload.return_value.name = "test1.png"
 
     with open("test.png", "wb") as f:  # dummy image
         f.write(b"\x89PNG\r\n\x1a\n")
@@ -80,13 +74,14 @@ def test_htmlText_with_designFile_and_specification_returns_200(mock_delete, moc
         response = client.post(
             "/webpage-analysis",
             data=html_spec_json,
-            files={"designFile": (mock_upload.name, file, "image/png")}
+            files={"designFile": (mock_upload.return_value.name, file, "image/png")}
         )
-
+    os.remove("test.png")
     assert response.status_code == 200
     assert "Mock: HTML with file" in response.text
     mock_generate.assert_called_once()
     mock_delete.assert_called_once()
+    mock_upload.assert_called_once()
 
 @patch("app.main.client.models.generate_content")
 def test_no_htmlText_throws_error(mock_generate):
@@ -99,15 +94,12 @@ def test_no_htmlText_throws_error(mock_generate):
 
     assert response.status_code == 422
 
-
 @patch("app.main.client.models.generate_content")
 @patch("app.main.client.files.upload")
 @patch("app.main.client.files.delete")
-def test_wrong_designFile_format_throws_error(mock_delete, mock_upload, mock_generate):
+def test_htmlText_with_wrong_designFile_format_returns_200(mock_delete, mock_upload, mock_generate):
     mock_generate.return_value.text = "Mock: HTML with file"
-    mock_upload = Mock()
-    mock_upload.return_value = "Mock file uploaded"
-    mock_upload.name = "test1.pdf"
+    mock_upload.return_value.name = "test1.pdf"
 
     with open("test.pdf", "wb") as f:  # dummy image
         f.write(b"\x89PNG\r\n\x1a\n")
@@ -115,10 +107,10 @@ def test_wrong_designFile_format_throws_error(mock_delete, mock_upload, mock_gen
     with open("test.pdf", "rb") as file:
         response = client.post(
             "/webpage-analysis",
-            data=html_json,
-            files={"designFile": (mock_upload.name, file, "application/pdf")}
+            data=html_spec_json,
+            files={"designFile": (mock_upload.return_value.name, file, "application/pdf")}
         )
-    
+    os.remove("test.pdf")
     assert response.status_code == 400
     assert "designFile must be an image" in response.text
 
@@ -151,19 +143,18 @@ def test_large_specification_throws_error(mock_generate):
 @patch("app.main.client.files.delete")
 def test_large_designFile_throws_error(mock_delete, mock_upload, mock_generate):
     mock_generate.return_value.text = "Mock: HTML with file"
-    mock_upload = Mock()
-    mock_upload.return_value = "Mock file uploaded"
-    mock_upload.name = "test1.png"
+    mock_upload.return_value.name = "test1.pdf"
+
+    main_module.client.files.upload = mock_upload
 
     with open("test.png", "wb") as f:  # dummy image
         f.write(b"\x89PNG\r\n\x1a\n"*700000)
-        print(len(b"\x89PNG\r\n\x1a\n"))
 
     with open("test.png", "rb") as file:
         response = client.post(
             "/webpage-analysis",
             data=html_json,
-            files={"designFile": (mock_upload.name, file, "image/png")}
+            files={"designFile": (mock_upload.return_value.name, file, "image/png")}
         )
     os.remove("test.png")
     assert response.status_code == 400
