@@ -141,7 +141,7 @@ def test_large_htmlText_throws_error(mock_delete, mock_upload, mock_generate):
     # JSON content passed as a field in multipart/form-data
     response = client.post(
         "/webpage-analysis",
-        data={"htmlText": "<h1>HELLO WORLD</h1>"*3000}
+        data={"htmlText": "<h1>HELLO WORLD</h1>"*100000}
     )
 
     assert response.status_code == 400
@@ -159,7 +159,7 @@ def test_large_specification_throws_error(mock_delete, mock_upload, mock_generat
     # JSON content passed as a field in multipart/form-data
     response = client.post(
         "/webpage-analysis",
-        data={"htmlText": "<h1>HELLO WORLD</h1>", "specification": "This is a html file"*5000}
+        data={"htmlText": "<h1>HELLO WORLD</h1>", "specification": "This is a html file"*100000}
     )
 
     assert response.status_code == 400

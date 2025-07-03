@@ -100,16 +100,17 @@ async def root():
 @app.post("/webpage-analysis", response_class=PlainTextResponse)
 async def webpage_analysis(
     htmlText: Annotated[str, Form()],
-    specification: Annotated[str | None, Form()] = None,
+    specification: Annotated[str | None, Form()] = "",
     designFile: Annotated[UploadFile | None, File()] = None
 ):
+    # return "HELLO IT WORKS"
     if designFile:
         designFile_content = await designFile.read()
     if not htmlText:
         raise HTTPException(status_code=400, detail="htmlText is required")
-    if len(htmlText)>50000 or specification and len(specification)>50000:
+    if len(htmlText+specification)>1800000:
         raise HTTPException(status_code=400, detail="Files are too large")
-    if designFile and len(designFile_content)>5*1024*1024:
+    if designFile and len(designFile_content)>2*1024*1024:
         raise HTTPException(status_code=400, detail="Files are too large")
     if designFile and not designFile.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="designFile must be an image")
