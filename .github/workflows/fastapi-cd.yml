@@ -1,9 +1,11 @@
-name: Deploy WBF python-server
+name: CD fastAPI
 on:
   push:
     branches:
       - main
-
+permissions:
+  contents: read
+  packages: write
 jobs:
   deploy:
     runs-on: ubuntu-latest
