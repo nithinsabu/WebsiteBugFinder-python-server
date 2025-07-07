@@ -1,0 +1,7 @@
+test-requirements.txt
+*cache*
+*venv*
+sample_test
+.github
+.env
+.gitignore
