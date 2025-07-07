@@ -1,15 +1,14 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.responses import PlainTextResponse, HTMLResponse
 from pydantic import BaseModel
-from typing import Optional, Annotated
+from typing import Annotated
 import os
-import google.genai as genai
-from dotenv import load_dotenv
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
+from app.gemini_client import get_client
+
 app = FastAPI()
 
 # Load Gemini client
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+client = get_client()
 
 class AnalysisRequest(BaseModel):
     htmlText: Annotated[str | None, Form()] = None
@@ -97,6 +96,8 @@ async def root():
 
 
     """
+
+
 @app.post("/webpage-analysis", response_class=PlainTextResponse)
 async def webpage_analysis(
     htmlText: Annotated[str, Form()],
@@ -140,3 +141,5 @@ async def webpage_analysis(
     if designFile:
         client.files.delete(name=uploaded.name)
     return response.text
+
+    

@@ -22,6 +22,6 @@ jobs:
       - name: install libraries
         run: |
           pip install --no-cache-dir --upgrade \
-          -r dev-requirements.txt
+          -r test-requirements.txt
       - name: Run Tests
         run: pytest
