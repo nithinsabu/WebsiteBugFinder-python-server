@@ -1,15 +1,25 @@
 #mistakes: sending client.post here as files= instead of data=, using pydantic model on endpoint to sending file doesn't work. pydantic is just for json
 from fastapi.testclient import TestClient
 from unittest.mock import patch, Mock
-from .main import app
+from app.main import app
 import os
-import app.main as main_module
 import pytest
+import app.main as main
 client = TestClient(app)
 
 html_json = {"htmlText": "<h1>Hello</h1>"}
 html_spec_json = {"htmlText": "<h1>Hello</h1>", "specification": "Must follow accessibility"}
 
+@pytest.fixture(autouse=True)
+def mock_gemini_client(monkeypatch):
+    mock = Mock()
+    mock.models.generate_content = Mock(return_value="mock_generate_content")
+    mock.files.upload = Mock(return_value="mock_upload")
+    mock.files.delete = Mock(return_value="mock_delete")
+    monkeypatch.setattr(main, "client", mock)
+    monkeypatch.setattr(os, "getenv", "mock_api_key")
+    from .main import client as imported_client
+    assert imported_client.models.generate_content(model="xxx", contents=["xxx"]) == "mock_generate_content"
 
 @patch("app.main.client.models.generate_content")
 @patch("app.main.client.files.upload")
@@ -175,7 +185,6 @@ def test_large_designFile_throws_error(mock_delete, mock_upload, mock_generate):
     mock_generate.return_value.text = "Mock: HTML with file"
     mock_upload.return_value.name = "test1.pdf"
 
-    main_module.client.files.upload = mock_upload
 
     with open("test.png", "wb") as f:  # dummy image
         f.write(b"\x89PNG\r\n\x1a\n"*700000)
