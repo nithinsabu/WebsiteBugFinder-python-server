@@ -1,1 +1,3 @@
-fat
+fastapi[standard]
+google-genai
+dotenv
