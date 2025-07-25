@@ -1,4 +1,4 @@
-name: CD fastAPI
+name: CD
 on:
   push:
     branches:
