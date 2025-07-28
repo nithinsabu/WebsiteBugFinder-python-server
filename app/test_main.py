@@ -119,6 +119,7 @@ def mock_gemini_client(monkeypatch):
 @patch("app.main.client.files.upload")
 @patch("app.main.client.files.delete")
 def test_htmlText_only_returns_200(mock_delete, mock_upload, mock_generate):
+    """Test that only sending htmlText returns 200 and triggers LLM call."""
     mock_generate.return_value.text = json.dumps(mock_api_response)
     # JSON content passed as a field in multipart/form-data
     response = client.post(
@@ -137,6 +138,7 @@ def test_htmlText_only_returns_200(mock_delete, mock_upload, mock_generate):
 @patch("app.main.client.files.upload")
 @patch("app.main.client.files.delete")
 def test_htmlText_with_specification_returns_200(mock_delete, mock_upload, mock_generate):
+    """Test that htmlText with specification returns 200 and triggers LLM call."""
     mock_generate.return_value.text = json.dumps(mock_api_response)
     response = client.post(
         "/webpage-analysis",
@@ -154,6 +156,7 @@ def test_htmlText_with_specification_returns_200(mock_delete, mock_upload, mock_
 @patch("app.main.client.files.upload")
 @patch("app.main.client.files.delete")
 def test_htmlText_with_designFile_returns_200(mock_delete, mock_upload, mock_generate):
+    """Test that htmlText with valid image file returns 200, uploads and deletes file."""
     mock_generate.return_value.text = json.dumps(mock_api_response)
     mock_upload.return_value.name = "test1.png"
 
@@ -178,6 +181,7 @@ def test_htmlText_with_designFile_returns_200(mock_delete, mock_upload, mock_gen
 @patch("app.main.client.files.upload")
 @patch("app.main.client.files.delete")
 def test_htmlText_with_specification_and_designFile_returns_200(mock_delete, mock_upload, mock_generate):
+    """Test htmlText + specification + image file returns 200, triggers full flow."""
     mock_generate.return_value.text = json.dumps(mock_api_response)
     mock_upload.return_value.name = "test1.png"
 
@@ -202,6 +206,7 @@ def test_htmlText_with_specification_and_designFile_returns_200(mock_delete, moc
 @patch("app.main.client.files.upload")
 @patch("app.main.client.files.delete")
 def test_no_htmlText_throws_error(mock_delete, mock_upload, mock_generate):
+    """Test that missing htmlText raises 422 validation error."""
     mock_generate.return_value.text = json.dumps(mock_api_response)
     response = client.post(
         "/webpage-analysis",
@@ -217,6 +222,7 @@ def test_no_htmlText_throws_error(mock_delete, mock_upload, mock_generate):
 @patch("app.main.client.files.upload")
 @patch("app.main.client.files.delete")
 def test_htmlText_with_wrong_designFile_format_returns_200(mock_delete, mock_upload, mock_generate):
+    """Test that non-image designFile returns 400 with correct error message."""
     mock_generate.return_value.text = json.dumps(mock_api_response)
     mock_upload.return_value.name = "test1.pdf"
 
@@ -241,6 +247,7 @@ def test_htmlText_with_wrong_designFile_format_returns_200(mock_delete, mock_upl
 @patch("app.main.client.files.upload")
 @patch("app.main.client.files.delete")
 def test_large_htmlText_throws_error(mock_delete, mock_upload, mock_generate):
+    """Test that excessively large htmlText returns 400 with appropriate error."""
     mock_generate.return_value.text = json.dumps(mock_api_response)
     response = client.post(
         "/webpage-analysis",
@@ -258,6 +265,7 @@ def test_large_htmlText_throws_error(mock_delete, mock_upload, mock_generate):
 @patch("app.main.client.files.upload")
 @patch("app.main.client.files.delete")
 def test_large_specification_throws_error(mock_delete, mock_upload, mock_generate):
+    """Test that excessively large specification text returns 400."""
     mock_generate.return_value.text = json.dumps(mock_api_response)
     response = client.post(
         "/webpage-analysis",
@@ -275,6 +283,7 @@ def test_large_specification_throws_error(mock_delete, mock_upload, mock_generat
 @patch("app.main.client.files.upload")
 @patch("app.main.client.files.delete")
 def test_large_designFile_throws_error(mock_delete, mock_upload, mock_generate):
+    """Test that large designFile returns 400 and no file operations are performed."""
     mock_generate.return_value.text = json.dumps(mock_api_response)
     mock_upload.return_value.name = "test1.png"
 
@@ -298,6 +307,7 @@ def test_large_designFile_throws_error(mock_delete, mock_upload, mock_generate):
 @patch("app.main.client.files.upload")
 @patch("app.main.client.files.delete")
 def test_webAuditResults_invalid_json_throws_400(mock_delete, mock_upload, mock_generate):
+    """Test that malformed webAuditResults JSON returns 400 error."""
     mock_generate.return_value.text = json.dumps(mock_api_response)
     response = client.post(
         "/webpage-analysis",
@@ -318,6 +328,7 @@ def test_webAuditResults_invalid_json_throws_400(mock_delete, mock_upload, mock_
 @patch("app.main.client.files.upload")
 @patch("app.main.client.files.delete")
 def test_webAuditResults_missing_keys_throws_400(mock_delete, mock_upload, mock_generate):
+    """Test that webAuditResults with missing required keys returns 400."""
     mock_generate.return_value.text = json.dumps(mock_api_response)
     response = client.post(
         "/webpage-analysis",
