@@ -44,6 +44,15 @@ class FunctionalDiscrepancy(BaseModel):
 
 
 class DetailedAnalysis(BaseModel):
+    """
+    Represents a detailed technical analysis of the webpage.
+
+    Attributes:
+        Content_Discrepancies: Issues related to text/content.
+        Styling_Discrepancies: Issues with visual styling or design.
+        Intentional_Flaws_And_Known_Issues: Known/expected issues acknowledged in the webpage.
+        Functional_Discrepancies: Issues related to the webpage’s behavior or logic.
+    """
     Content_Discrepancies: Optional[ContentDiscrepancy] = Field(default=None, alias="Content Discrepancies")
     Styling_Discrepancies: Optional[StylingDiscrepancy] = Field(default=None, alias="Styling Discrepancies")
     Intentional_Flaws_And_Known_Issues: Optional[IntentionalFlawsAndKnownIssues] = Field(
@@ -76,6 +85,15 @@ class LayoutReport(BaseModel):
 
 
 class NonLLMEvaluations(BaseModel):
+    """
+    Evaluations performed using non-LLM tools (e.g., linters, validators).
+
+    Attributes:
+        Accessibility_Report: Accessibility audit report.
+        Performance_Report: Performance-related observations.
+        Validation_Report: W3C or markup validation issues.
+        Layout_Report: Visual layout and structural issues.
+    """
     Accessibility_Report: Optional[AccessibilityReport] = Field(default=None, alias="Accessibility Report")
     Performance_Report: Optional[PerformanceReport] = Field(default=None, alias="Performance Report")
     Validation_Report: Optional[ValidationReport] = Field(default=None, alias="Validation Report")
@@ -83,6 +101,15 @@ class NonLLMEvaluations(BaseModel):
 
 
 class OtherIssue(BaseModel):
+    """
+    Represents miscellaneous issues not covered by main categories.
+
+    Attributes:
+        Issue: Description of the issue.
+        Details: Additional context.
+        Code: Related code snippet.
+        Recommended_Fix: Suggested way to fix the problem.
+    """
     Issue: Optional[str] = Field(default=None, alias="Issue")
     Details: Optional[str] = Field(default=None, alias="Details")
     Code: Optional[str] = Field(default=None, alias="Code")
@@ -90,6 +117,20 @@ class OtherIssue(BaseModel):
 
 
 class WebpageAnalysisResponse(BaseModel):
+    """
+    Root model for holding the entire analysis result of a webpage.
+
+    Attributes:
+        Executive_Summary: Brief summary of key findings.
+        Detailed_Analysis: In-depth breakdown of issues (content, styling, etc.).
+        Non_LLM_Evaluations: Results from automated tools (accessibility, performance, etc.).
+        Other_Issues: Any other findings not captured by the categories above.
+
+    Config:
+        populate_by_name: Enables population of fields by their names in input data.
+        alias_generator: Disabled (set to None).
+        json_encoders: No custom JSON encoders defined.
+    """
     Executive_Summary: Optional[str] = Field(default=None, alias="Executive Summary")
     Detailed_Analysis: Optional[DetailedAnalysis] = Field(default=None, alias="Detailed Analysis")
     Non_LLM_Evaluations: Optional[NonLLMEvaluations] = Field(default=None, alias="Non-LLM Evaluations")
