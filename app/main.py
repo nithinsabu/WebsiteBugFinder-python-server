@@ -1,3 +1,10 @@
+"""
+This FastAPI application provides an endpoint for webpage UI analysis using a Gemini LLM model.
+
+- Accepts HTML content, optional specifications, design file (image), and structured audit results.
+- Constructs a detailed LLM prompt and optionally uploads an image for multimodal input.
+- Returns structured feedback in a strict JSON schema defined by `WebpageAnalysisResponse`.
+"""
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.responses import PlainTextResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel
@@ -8,6 +15,7 @@ from dotenv import load_dotenv
 import random
 import string
 import json
+import logging
 from .models import WebpageAnalysisResponse
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
 model = os.getenv("MODEL")
@@ -16,95 +24,34 @@ app = FastAPI()
 # Load Gemini client
 client = get_client()
 
-class AnalysisRequest(BaseModel):
-    htmlText: Annotated[str | None, Form()] = None
-    specification: Annotated[str | None, Form()] = None
-    designFile: Annotated[UploadFile | None, File()] = None
-@app.get("/", response_class=HTMLResponse)
-async def root():
-    # print(os.getenv("GEMINI_API_KEY"))
-    return """
-    <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Webpage Analysis Form</title>
-  <style>
-    #responseBox {
-      margin-top: 20px;
-      padding: 10px;
-      border: 1px solid #ccc;
-      background-color: #f7f7f7;
-      white-space: pre-wrap;
-    }
-  </style>
-</head>
-<body>
-  <h2>Submit Webpage for Analysis</h2>
-  <form id="analysisForm">
-    <label for="htmlText">HTML Text:</label><br>
-    <textarea id="htmlText" name="htmlText" rows="5" cols="50"></textarea><br><br>
-
-    <label for="specification">Specification:</label><br>
-    <textarea type="text" id="specification" name="specification" rows="5" cols="50"></textarea><br><br>
-
-    <label for="designFile">Design File:</label><br>
-    <input type="file" id="designFile" name="designFile"><br><br>
-
-    <button type="submit">Submit</button>
-  </form>
-
-  <div id="responseBox">Response will appear here...</div>
-
-  <script>
-    const form = document.getElementById("analysisForm");
-    const responseBox = document.getElementById("responseBox");
-
-    form.addEventListener("submit", async function (event) {
-  event.preventDefault();
-
-  const formData = new FormData();
-
-  const htmlText = document.getElementById("htmlText").value;
-  const specification = document.getElementById("specification").value;
-  const designFileInput = document.getElementById("designFile");
-
-  if (htmlText.trim()) {
-    formData.append("htmlText", htmlText);
-  }
-
-  if (specification.trim()) {
-    formData.append("specification", specification);
-  }
-
-  if (designFileInput.files.length > 0) {
-    formData.append("designFile", designFileInput.files[0]);
-  }
-  responseBox.textContent = "LOADING...";
-  try {const response = await fetch("http://localhost:8000/webpage-analysis", {
-    method: "POST",
-    body: formData
-  });
-
-  const text = await response.text();
-  responseBox.textContent = text;
-  }
-  catch(e){
-    responseBox.textContent = e.message;
-  }finally{
-
-  }
-});
-
-  </script>
-</body>
-</html>
-
-
-    """
-
 def get_prompt(htmlText: str, specification: str | None = "", designFile: bool = False, webAuditResults: str = "") -> str:
+    """
+    Generates a formatted prompt string for a language model to perform a structured UI analysis.
 
+    This function constructs a detailed instruction string that includes:
+    - An example JSON response format for the model to strictly follow.
+    - Provided HTML content to be analyzed.
+    - Optional design specifications and flags for attached design files.
+    - Optional non-LLM evaluation data (e.g., accessibility, performance, validation results).
+
+    Args:
+        htmlText (str): The raw HTML content to be analyzed.
+        specification (str | None, optional): Optional design or functional specifications. Defaults to "".
+        designFile (bool, optional): Indicates whether a design file is attached. Defaults to False.
+        webAuditResults (str, optional): A JSON string containing non-LLM evaluation results. Expected keys:
+            - "axeCoreResult"
+            - "pageSpeedResult"
+            - "nuValidatorResult"
+            - "responsivenessResult"
+
+    Returns:
+        str: A formatted prompt string that includes all inputs and instructions for LLM-based analysis.
+
+    Notes:
+        - Ensures the output instructs the LLM to produce only raw JSON (no markdown, no surrounding text).
+        - Embeds optional evaluation summaries in the prompt if present.
+        - If evaluations are missing or invalid, the "Non-LLM Evaluations" field is marked as null.
+    """
     try:
         evaluations = json.loads(webAuditResults) if webAuditResults else {}
     except json.JSONDecodeError:
@@ -236,6 +183,29 @@ async def webpage_analysis(
     webAuditResults: Annotated[str | None, Form()] = "",
     designFile: Annotated[UploadFile | None, File()] = None
 ):
+    """
+    Analyzes a webpage using LLM-based evaluation and optional design/audit data.
+
+    Accepts:
+        - `htmlText`: The HTML content to be analyzed.
+        - `specification`: Optional textual design/functionality guidelines.
+        - `webAuditResults`: Optional JSON string containing performance/accessibility/audit data.
+        - `designFile`: Optional image file representing the design.
+
+    The endpoint:
+        - Validates all inputs and their sizes/types.
+        - Parses and verifies the structure of `webAuditResults` if provided.
+        - Uploads the `designFile` to Gemini (if given), then deletes it.
+        - Constructs a strict prompt for the LLM to respond with JSON only.
+
+    Returns:
+        A validated `WebpageAnalysisResponse` Pydantic model based on the LLM output.
+
+    Raises:
+        HTTPException:
+            - 400: Invalid or missing input data.
+            - 500: Unexpected server error during analysis.
+    """
     # print(get_prompt(htmlText, specification, designFile!=None, webAuditResults))
     # obj = {
     #   "Executive Summary": "This is a summary of the LLM analysis.",
@@ -329,7 +299,7 @@ async def webpage_analysis(
         designFile_content = await designFile.read()
     if not htmlText:
         raise HTTPException(status_code=400, detail="htmlText is required")
-    if len(htmlText+specification+webAuditResults)>2000000:
+    if len(htmlText+specification+webAuditResults)>2*1024*1024:
         raise HTTPException(status_code=400, detail="Files are too large")
     if designFile and len(designFile_content)>5*1024*1024:
         raise HTTPException(status_code=400, detail="Files are too large")
@@ -345,10 +315,9 @@ async def webpage_analysis(
         except (json.JSONDecodeError, TypeError):
             raise HTTPException(status_code=400, detail="Invalid webAuditResults JSON")
     contents = [get_prompt(htmlText=htmlText, specification=specification, designFile=designFile!=None, webAuditResults=webAuditResults)]
+    temp_file_path = ''.join(random.choices(string.ascii_letters + string.digits, k=12)) + designFile.filename 
     try:
       if designFile:
-          temp_file_path = ''.join(random.choices(string.ascii_letters + string.digits, k=12)) + designFile.filename 
-
           with open(temp_file_path, "wb") as f:
               f.write(designFile_content)
           
@@ -368,5 +337,9 @@ async def webpage_analysis(
 
       return validated_response
     except Exception as e:
+        logging.error(e)
         raise HTTPException(status_code=500, detail=str(e) or "Error with server")
+    finally:
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
     
