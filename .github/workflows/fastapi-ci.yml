@@ -24,4 +24,4 @@ jobs:
           pip install --no-cache-dir --upgrade \
           -r test-requirements.txt
       - name: Run Tests
-        run: pytest
+        run: pytest --cov=. --cov-report=term
