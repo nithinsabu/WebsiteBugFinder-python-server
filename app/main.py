@@ -58,10 +58,10 @@ def get_prompt(htmlText: str, specification: str | None = "", designFile: bool =
         evaluations = {}
 
     prompt = (
-        "Please perform a comprehensive UI analysis of the html mentioned and generate strictly a JSON report "
+        "Please perform a comprehensive UI analysis of the html mentioned and generate STRICTLY a JSON report "
         "(No additional text except the JSON response: Start with \"{\", end with \"}\". No markdown. Raw JSON as text.). The output must strictly follow the JSON structure provided "
         "in the 'Example Output Format' section below. Fill in the data based on my inputs, ensuring no deviation "
-        "from the provided keys, nesting, or data types. Fill key \"code\" with the affected html code only. Fill the key \"Non-LLM Evaluations\" as null if input non-LLM Evaluations are not given (\"Non-LLM Evaluations\": null). Fill any key in inapplicable, fill it as null.\n\n"
+        "from the provided keys, nesting, or data types. Fill key \"code\" with the affected html code only. Fill the key \"Non-LLM Evaluations\" as null if input non-LLM Evaluations are not given (\"Non-LLM Evaluations\": null). If any key is inapplicable, fill it as null if the corresponding value is an object, fill it as [] (empty array) if corresponding value is an array.\n\n"
         "We are only concerned with a desktop screen analysis.\n\n"
         "**Example Output Format:**\n\n"
         '''{
@@ -206,95 +206,7 @@ async def webpage_analysis(
             - 400: Invalid or missing input data.
             - 500: Unexpected server error during analysis.
     """
-    # print(get_prompt(htmlText, specification, designFile!=None, webAuditResults))
-    # obj = {
-    #   "Executive Summary": "This is a summary of the LLM analysis.",
-    #   "Detailed Analysis": {
-    #     "Content Discrepancies": {
-    #       "Summary": "Content issues found.",
-    #       "Findings": [
-    #         {
-    #           "Section": "Header",
-    #           "Issue": "Incorrect tag usage",
-    #           "Details": "Used <span> instead of <h1>.",
-    #           "Code": "<span>Title</span>",
-    #           "Recommended Fix": "Replace <span> with <h1>."
-    #         }
-    #       ]
-    #     },
-    #     "Styling Discrepancies": {
-    #       "Summary": "Styling issues found.",
-    #       "Findings": [
-    #         {
-    #           "Section": "Button",
-    #           "Issue": "Low contrast text",
-    #           "Details": "Text color fails WCAG contrast ratio.",
-    #           "Code": ".btn { color: #999; }",
-    #           "Recommended Fix": "Use darker text color."
-    #         }
-    #       ]
-    #     },
-    #     "Intentional Flaws And Known Issues": {
-    #       "Summary": "Known intentional issues.",
-    #       "Findings": [
-    #         {
-    #           "Category": "HTML Validation",
-    #           "Issue": "Invalid attribute used",
-    #           "Details": "Custom attribute not allowed by spec.",
-    #           "Recommended Fix": "Remove or replace with data-* attribute."
-    #         }
-    #       ]
-    #     },
-    #     "Functional Discrepancies": {
-    #       "Summary": "No functional discrepancies detected.",
-    #       "Findings": []
-    #     }
-    #   },
-    #   "Non-LLM Evaluations": {
-    #     "Accessibility Report": {
-    #       "Summary": "Accessibility check summary.",
-    #       "Key Findings": [
-    #         {
-    #           "Issue": "Missing alt text on images",
-    #           "Recommended Fix": "Add alt attributes."
-    #         }
-    #       ]
-    #     },
-    #     "Performance Report": {
-    #       "Summary": "Performance metrics summary.",
-    #       "Key Findings": [
-    #         {
-    #           "Issue": "Large image sizes",
-    #           "Recommended Fix": "Optimize image assets."
-    #         }
-    #       ]
-    #     },
-    #     "Validation Report": {
-    #       "Summary": "Validation results summary.",
-    #       "Key Findings": [
-    #         {
-    #           "Issue": "Unclosed HTML tags",
-    #           "Recommended Fix": "Ensure all tags are properly closed."
-    #         }
-    #       ]
-    #     },
-    #     "Layout Report": {
-    #       "Summary": "Layout check summary.",
-    #       "Recommended Fix": "Fix overlapping elements on mobile view."
-    #     }
-    #   },
-    #   "Other Issues": [
-    #     {
-    #       "Issue": "Deprecated HTML tag used",
-    #       "Details": "The <center> tag is obsolete.",
-    #       "Code": "<center>Content</center>",
-    #       "Recommended Fix": "Use CSS for centering."
-    #     }
-    #   ]
-    # }
-    # return JSONResponse(content=obj)
-    # return "HELLO IT WORKS"
-    # return JSONResponse({'Mock': 'HTML only analysis.'})
+
     if designFile:
         designFile_content = await designFile.read()
     if not htmlText:
