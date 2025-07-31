@@ -14,5 +14,8 @@ Steps to run locally:
 
 To run the docker image:
 1. docker build -t fastapi-app .
-2. docker run -e GEMINI_API_KEY=<Provide your gemini API KEY> MODEL=<Provide your gemini model> --network <Provide docker network name> --name <Provide alias> -p <PORT>:80 fastapi-app
+2. docker run -e GEMINI_API_KEY=<Provide your gemini API KEY> -e MODEL=<Provide your gemini model> --network <Provide docker network name> --name <Provide alias> fastapi-app
 (Runs on port 80 of the container)
+
+Example run:
+docker run -e GEMINI_API_KEY=xxxxxxxx -e MODEL=gemini-2.5-flash --name fastapi-app --network wbfapp fastapi-app
